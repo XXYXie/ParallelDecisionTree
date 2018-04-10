@@ -17,3 +17,14 @@ struct Node {
   // Parent of this node.
   Node *parent;
 };
+
+struct EntropyOutput {
+  // Best feature to split.
+  int feature;
+  // Value to split on.
+  double splitVal;
+  // Loss of best splitVal.
+  double loss;
+};
+
+#endif
