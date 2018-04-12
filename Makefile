@@ -1,17 +1,26 @@
-CC=gcc
-CXX=g++
+CC=/project/cec/class/cse539/tapir/build/bin/clang
+CXX=/project/cec/class/cse539/tapir/build/bin/clang++
+CILK_LIBS=/project/linuxlab/gcc/6.4/lib64
 
-CFLAGS=-c -Wall -std=c++11
+CFLAGS = -ggdb -O3 -fcilkplus
+CXXFLAGS = -ggdb -std=c++11 -O3 -fcilkplus
+
+INST_RTS_LIBS=/project/cec/class/cse539/inst-cilkplus-rts/lib
+# INST_LIBS = -L$(INST_RTS_LIBS) -Wl,-rpath -Wl,$(INST_RTS_LIBS) -lcilkrts -lpthread -lrt -lm -ldl
 
 all: decisionTree
 
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -o $@ -c $<
+
 decisionTree: Main.o DecisionTree.o
-	$(CXX) Main.o DecisionTree.o -o decisionTree
+#	$(CXX) Main.o DecisionTree.o -o decisionTree
+	$(CXX) -o $@ $^ $(LIBS)
 
-Main.o: Main.cpp
-	$(CXX) $(CFLAGS) Main.cpp
-
-DecisionTree.o: DecisionTree.cpp
-	$(CXX) $(CFLAGS) DecisionTree.cpp
+# Main.o: Main.cpp
+# 	$(CXX) $(CFLAGS) Main.cpp
+#
+# DecisionTree.o: DecisionTree.cpp
+# 	$(CXX) $(CFLAGS) DecisionTree.cpp
 clean:
 	-rm -f *.o
