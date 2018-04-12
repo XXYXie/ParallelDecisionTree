@@ -2,6 +2,7 @@
 #define TREE_h
 
 #include <iostream>
+#include <vector>
 using namespace std;
 
 struct Node {
@@ -18,7 +19,7 @@ struct Node {
   Node *parent;
 };
 
-struct EntropyOutput {
+struct EntropySplitOutput {
   // Best feature to split.
   int feature;
   // Value to split on.

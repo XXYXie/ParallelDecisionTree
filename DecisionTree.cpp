@@ -1,8 +1,12 @@
 #include "DecisionTree.h"
-#include <vector>
 
 // Calculate entropy.
-EntropyOutput *entropy(vector<double> xTr, vector<double> yTr, vector<double> weights) {
-  EntropyOutput *output = new EntropyOutput();
+EntropySplitOutput *entropySplit(vector<double> xTr, vector<double> yTr, vector<double> weights) {
+  EntropySplitOutput *output = new EntropySplitOutput();
   return output;
+}
+
+// Recursively build
+Node *buildTree() {
+  return new Node();
 }
