@@ -28,4 +28,6 @@ struct EntropySplitOutput {
   double loss;
 };
 
+Node *buildTree(Node *parent, int depth, vector<int> labels, vector<vector<double>> features, vector<int> index,
+                vector<int> featureIndex, vector<double> weights);
 #endif

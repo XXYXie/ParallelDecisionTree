@@ -3,7 +3,8 @@
 #include <sstream>
 #include <string>
 
-vector<int> readX() {
+
+vector<int> readY() {
   // Read in labels from y training data.
   vector<int> labels;
   ifstream file("./data/yTr.csv");
@@ -23,7 +24,7 @@ vector<int> readX() {
   return labels;
 }
 
-vector<vector<double>> readY() {
+vector<vector<double>> readX() {
   // Read in features from x training data.
   vector<vector<double>> features;
   ifstream filex("./data/xTr.csv");
@@ -45,18 +46,30 @@ vector<vector<double>> readY() {
   return features;
 }
 
+// vector<int> labels;
+// vector<vector<double>> features;
+
 int main(int argv, char **argc) {
   printf("Main. \n");
-  vector<int> labels = readX();
-  vector<vector<double>> features = readY();
+  vector<int> labels = readY();
+  vector<vector<double>> features = readX();
 
-  for (auto i = features.begin(); i != features.end(); ++i) {
-    cout << "feature: " << endl;
-    vector<double> cur = *i;
-    for (auto j = cur.begin(); j != cur.end(); ++j) {
-      cout << (*j) << " ";
-    }
-    cout << "\n";
+  vector<int> origIndex;
+  for (int i = 0; i < labels.size(); ++i) {
+    origIndex.push_back(i);
   }
+
+  vector<int> origFeatureIndex;
+  for (int j = 0; j < features.size(); ++j) {
+    origFeatureIndex.push_back(j);
+  }
+
+  vector<double> weights;
+  for (int i = 0; i < labels.size(); ++i) {
+    weights.push_back(1.0);
+  }
+
+  buildTree(NULL, 0, labels, features, origIndex, origFeatureIndex, weights);
+
   return 0;
 }
