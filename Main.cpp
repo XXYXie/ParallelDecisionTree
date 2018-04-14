@@ -46,30 +46,39 @@ vector<vector<double>> readX() {
   return features;
 }
 
+vector<int> getOrigIndex(const vector<int> labels ) {
+  vector<int> origIndex;
+  for (int i = 0; i < labels.size(); ++i) {
+    origIndex.push_back(i);
+  }
+  return origIndex;
+}
 // vector<int> labels;
 // vector<vector<double>> features;
 
 int main(int argv, char **argc) {
   printf("Main. \n");
-  vector<int> labels = readY();
-  vector<vector<double>> features = readX();
+  const vector<int> labels = readY();
+  const vector<vector<double>> features = readX();
 
-  vector<int> origIndex;
-  for (int i = 0; i < labels.size(); ++i) {
-    origIndex.push_back(i);
-  }
+  const vector<int> origIndex = getOrigIndex(labels);
 
   vector<int> origFeatureIndex;
   for (int j = 0; j < features.size(); ++j) {
     origFeatureIndex.push_back(j);
   }
+  // cout << "orig feature index start: " << endl;
+  // for (auto i = origFeatureIndex.begin(); i != origFeatureIndex.end(); ++i) {
+  //   cout << *i << " ";
+  // }
+  // cout << "\norig feature index end " << endl;
 
   vector<double> weights;
   for (int i = 0; i < labels.size(); ++i) {
     weights.push_back(1.0);
   }
 
-  buildTree(NULL, 0, labels, features, origIndex, origFeatureIndex, weights);
+  buildTree(NULL, 1, labels, features, origIndex, origFeatureIndex, weights);
 
   return 0;
 }

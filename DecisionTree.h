@@ -25,9 +25,10 @@ struct EntropySplitOutput {
   // Value to split on.
   double splitVal;
   // Loss of best splitVal.
-  double loss;
+  // double loss;
 };
-
-Node *buildTree(Node *parent, int depth, vector<int> labels, vector<vector<double>> features, vector<int> index,
-                vector<int> featureIndex, vector<double> weights);
+Node *buildTree(Node *parent, int depth, const vector<int> &labels,
+                const vector<vector<double>> &features,
+                const vector<int> &index, vector<int> &featureIndex,
+                vector<double> &weights);
 #endif
