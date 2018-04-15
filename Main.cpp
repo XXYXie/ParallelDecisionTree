@@ -3,11 +3,12 @@
 #include <sstream>
 #include <string>
 
+using namespace std;
 
-vector<int> readY() {
+vector<int> readY(const string&  filename) {
   // Read in labels from y training data.
   vector<int> labels;
-  ifstream file("./data/yTr.csv");
+  ifstream file(filename.c_str());
   if (!file.is_open()) {
     cout << "Error opening file y. " << endl;
   }
@@ -24,10 +25,10 @@ vector<int> readY() {
   return labels;
 }
 
-vector<vector<double>> readX() {
+vector<vector<double> > readX(const string&  filename) {
   // Read in features from x training data.
-  vector<vector<double>> features;
-  ifstream filex("./data/xTr.csv");
+  vector<vector<double> > features;
+  ifstream filex(filename.c_str());
   if (!filex.is_open()) {
     cout << "Error opening file x. " << endl;
   }
@@ -58,8 +59,8 @@ vector<int> getOrigIndex(const vector<int> labels ) {
 
 int main(int argv, char **argc) {
   printf("Main. \n");
-  const vector<int> labels = readY();
-  const vector<vector<double>> features = readX();
+  const vector<int> labels = readY("./data/yTr.csv");
+  const vector<vector<double> > features = readX("./data/xTr.csv");
 
   const vector<int> origIndex = getOrigIndex(labels);
 
@@ -78,7 +79,20 @@ int main(int argv, char **argc) {
     weights.push_back(1.0);
   }
 
-  buildTree(NULL, 1, labels, features, origIndex, origFeatureIndex, weights);
+  Node *root = new Node();
+  buildTree(root, 1, labels, features, origIndex, origFeatureIndex, weights);
 
+  vector<int> labelsTest = readY("./data/yTe.csv");
+  vector<vector<double> > featuresTest = readX("./data/xTe.csv");
+  vector<int> pred = evalTree(root, featuresTest);
+  int numTest = labelsTest.size();
+  int same = 0;
+  for (int i = 0; i < numTest; ++i) {
+    if (labelsTest[i] == pred[i]) {
+      same++;
+    }
+  }
+  double accuracy = 1.0 * same / numTest;
+  cout << "accuracy: " << accuracy << endl;
   return 0;
 }

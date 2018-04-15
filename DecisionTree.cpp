@@ -2,75 +2,126 @@
 #include <set>
 #include <algorithm>
 #include <math.h>
+#include <unordered_map>
 
-#include <cilk/cilk.h>
-#include <cilk/cilk_api.h>
+// #include <cilk/cilk.h>
+// #include <cilk/cilk_api.h>
 
 using namespace std;
 
-#define MAXDEPTH 4
+#define MAXDEPTH 6
 
-EntropySplitOutput *entropySplit(double *xTr, int *yTr, vector<double> &weights,
+vector<int> sortIndexes(vector<double> &v) {
+  // initialize original index locations
+  vector<int> idx(v.size());
+  iota(idx.begin(), idx.end(), 0);
+
+  // sort indexes based on comparing values in v
+  sort(idx.begin(), idx.end(),
+       [&v](int i1, int i2) {return v[i1] < v[i2];});
+
+  return idx;
+}
+
+int mode(int *y, const vector<int> &index) {
+  unordered_map<int, int> hashMap;
+  for (auto iter = index.begin(); iter != index.end(); ++iter) {
+    // cout << "iter: " << *iter << " ";
+    cout << y[*iter] << " ";
+    hashMap[y[*iter]] += 1;
+  }
+
+  int curMax = 0;
+  int ansY = y[0];
+  for (auto iter = hashMap.begin(); iter != hashMap.end(); ++iter) {
+    if (iter->second > curMax) {
+      curMax = iter->second;
+      ansY = iter->first;
+    }
+  }
+  cout << "\nmode: " << ansY << endl;
+  return ansY;
+}
+
+EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr, vector<double> &weights,
                                  vector<int> &featureIndex, int numData) {
+  numData = yTr.size();
   int indexArr[featureIndex.size()];
   for (int i = 0; i < featureIndex.size(); ++i) {
     indexArr[i] = featureIndex[i];
   }
 
   set<int> uniqueY;
-  for (int i = 0; i < numData; ++i) {
+  // cout << "before sort" << endl;
+  for (int i = 0; i < numData; i++) {
+    // cout << yTr[i] << " ";
     uniqueY.insert(yTr[i]);
   }
-
+  // cout << "\nbefore sort end" << endl;
   int bestFeature = *featureIndex.begin();
   double bestSplitVal = 0.0;
   double maxEntropy = - std::numeric_limits<double>::infinity();
 
-  for (int iter = 0; iter < featureIndex.size(); ++iter) {
+  for (int i = 0; i < featureIndex.size(); ++i) {
   // for (auto iter = featureIndex.begin(); iter != featureIndex.end(); ++iter) {
     // int i = *iter;
-    int i = indexArr[iter];
     // cout << "i: " << i << endl;
-    // TODO: sort and get indexes.
-    double leftEntropy = 0.0;
-    double rightEntropy = 0.0;
+
+    vector<int> sortedIndex = sortIndexes(xTr[i]);
+
+    cout << "feature i: " << i << endl;
+
+    vector<double> sx;
+    vector<int> sy;
+    vector<double> sw;
+
+    for (auto indexIter = sortedIndex.begin(); indexIter != sortedIndex.end(); ++indexIter) {
+      int j = *indexIter;
+      sx.push_back(xTr[i][j]);
+      sy.push_back(yTr[j]);
+      //sw.push_back(w[j]);
+    }
 
     for (int j = 0; j < numData - 1; ++j) {
-      // cout << "i: " << i << " j: " << j << endl;
-      // cout << "xTr[i*numData + j]: " << xTr[i*numData + j] << endl;
-      if (xTr[i*numData + j + 1] != xTr[i*numData + j]) {
+      // cout << "yaftersort: " << yTr[j] << endl;
+
+      // cout << "j: " << j << endl;
+      // cout << "xaftersort: " << xTr[i][j] << endl;
+      // cout << j << " "<< yTr[j] << endl;
+      if (sy[j + 1] != sy[j]) {
+        double leftEntropy = 0.0;
+        double rightEntropy = 0.0;
       // if (xTr[i][j + 1] != xTr[i][j]) {
+        cout << "diff j: " << j << endl;
+        cout << "sy[j]: " << sy[j] << " sy[j+1]: " << sy[j+1] << endl;
         for (set<int>::iterator it = uniqueY.begin(); it != uniqueY.end(); ++it) {
           int curY = *it;
           int leftYCount = 0;
           int rightYCount = 0;
           for (int k = 0; k <= j; ++k) {
-            if (yTr[k] == curY) leftYCount++;
+            if (sy[k] == curY) leftYCount++;
           }
           for (int k = j + 1; k < numData; ++k) {
-            if (yTr[k] == curY) rightYCount++;
+            if (sy[k] == curY) rightYCount++;
           }
           double pLeft = 1.0 * leftYCount / (j+1);
           double pRight = 1.0 * rightYCount / (numData - j - 1);
-          if (leftYCount == 0) {
-            leftEntropy = 0;
-          } else {
+          cout << "pLeft:" << pLeft << " pRight: " << pRight << " ";
+          if (leftYCount != 0) {
             leftEntropy += -pLeft * log2 (pLeft);
           }
-          if (rightYCount == 0) {
-            rightEntropy = 0;
-          } else {
+          if (rightYCount != 0) {
             rightEntropy += -pRight * log2 (pRight);
           }
-          // cout << "left: " << leftEntropy << " right: " << rightEntropy << endl;
+          cout << "left: " << leftEntropy << " right: " << rightEntropy << endl;
         }
 
-        double curEntropy = - 1.0 * j / numData * leftEntropy - 1.0 * (numData - j) / numData * rightEntropy;
-        // cout << "curEntropy: " << curEntropy << endl;
+        double curEntropy = - 1.0 * (j+1) / numData * leftEntropy - 1.0 * (numData - j - 1) / numData * rightEntropy;
+        cout << "curEntropy: " << curEntropy << endl;
         if (curEntropy > maxEntropy) {
           maxEntropy = curEntropy;
           // bestSplitVal = (xTr[i][j + 1] + xTr[i][j]) / 2;
-          bestSplitVal = (xTr[i*numData + j] + xTr[i*numData + j + 1]) / 2;
+          bestSplitVal = (sx[j+1] + sx[j]) / 2;
           bestFeature = i;
           // cout << "cur best feature: " << bestFeature << endl;
         }
@@ -78,13 +129,13 @@ EntropySplitOutput *entropySplit(double *xTr, int *yTr, vector<double> &weights,
     }
   }
   EntropySplitOutput *output = new EntropySplitOutput();
-  output->feature = bestFeature;
+  output->feature = indexArr[bestFeature];
   output->splitVal = bestSplitVal;
   return output;
 }
 
 // Recursively build
-Node *buildTree(Node *parent, int depth, const vector<int> &labels,
+void buildTree(Node *parent, int depth, const vector<int> &labels,
                 const vector<vector<double>> &features,
                 const vector<int> &index, vector<int> &featureIndex,
                 vector<double> &weights) {
@@ -93,45 +144,57 @@ Node *buildTree(Node *parent, int depth, const vector<int> &labels,
   int featureIndexSize = featureIndex.size();
   int featureSize = features.size();
   int labelSize = labels.size();
-  if (depth >= MAXDEPTH || featureIndexSize == 0) {
-    return NULL;
-  }
 
   int *y = (int *)malloc(labelSize * sizeof(int));
   double *x = (double *)malloc(featureSize * labelSize * sizeof(double));
 
+  vector<int> yCopy;
   set<int> setY;
   for (auto iter = index.begin(); iter != index.end(); ++iter) {
     int m = *iter;
     y[m] = labels[m];
     setY.insert(labels[m]);
+    yCopy.push_back(labels[m]);
   }
 
-  if (setY.size() == 1) return NULL;
+  if (depth > MAXDEPTH || setY.size() == 1) {
+    parent->prediction = mode(y, index);
+    return;
+  }
 
+  // if (parent == NULL) parent = new Node();
+
+  vector<vector<double>> xCopy;
   for (auto iter = featureIndex.begin(); iter != featureIndex.end(); ++iter) {
+    vector<double> curVector;
     for (auto iter2 = index.begin(); iter2 != index.end(); ++iter2) {
       int j = *iter2;
       x[(*iter) * labels.size() + j] = features[*iter][j];
+      curVector.push_back(features[*iter][j]);
     }
+    xCopy.push_back(curVector);
   }
 
   // TODO: check x.
 
   EntropySplitOutput *splitOutput =
-      entropySplit(x, y, weights, featureIndex, labelSize);
+      entropySplit(xCopy, yCopy, weights, featureIndex, labelSize);
   // EntropySplitOutput *splitOutput = new EntropySplitOutput();
-  delete []y;
-  delete []x;
 
   int selectedFeatureIndex = splitOutput->feature;
+  cout << "selectedFeatureIndex: " << selectedFeatureIndex << endl;
   double splitVal = splitOutput->splitVal;
+  cout << "numX: " << indexSize << endl;
+  cout << "splitVal: " << splitVal << endl;
+  // Node *node = new Node();
+  // node->parent = parent;
+  parent->prediction = mode(y, index);
+  cout << "parent->prediction: " << parent->prediction << endl;
+  parent->featureIndex = selectedFeatureIndex;
+  parent->cutoff = splitVal;
 
-  Node *node = new Node();
-  node->parent = parent;
-  node->prediction = 0; // TODO: mode()
-  node->featureIndex = selectedFeatureIndex;
-  node->cutoff = splitVal;
+  delete []y;
+  delete []x;
 
   vector<int> leftIndex, rightIndex;
   vector<double> leftWeights, rightWeights;
@@ -149,14 +212,34 @@ Node *buildTree(Node *parent, int depth, const vector<int> &labels,
   const vector<int> leftIndexConst = leftIndex;
   const vector<int> rightIndexConst = rightIndex;
 
-  std::vector<int>::iterator position = std::find(featureIndex.begin(), featureIndex.end(), selectedFeatureIndex);
-  if (position != featureIndex.end())  featureIndex.erase(position);
+  // std::vector<int>::iterator position = std::find(featureIndex.begin(), featureIndex.end(), selectedFeatureIndex);
+  // if (position != featureIndex.end())  featureIndex.erase(position);
 
   // cilk_spawn
-  node->left = cilk_spawn buildTree(node, depth + 1, labels, features,
+  parent->left = new Node();
+  parent->right = new Node();
+  buildTree(parent->left, depth + 1, labels, features,
                                     leftIndexConst, featureIndex, leftWeights);
-  node->right = buildTree(node, depth + 1, labels, features, rightIndexConst,
+  buildTree(parent->right, depth + 1, labels, features, rightIndexConst,
                           featureIndex, rightWeights);
-  cilk_sync;
-  return node;
+  // cilk_sync;
+  return;
+}
+
+vector<int> evalTree(Node *node, vector<vector<double>> &xTe) {
+  vector<int> ans;
+  int numX = xTe[0].size();
+  for (int j = 0; j < numX; ++j) {
+    Node *nodeCopy = node;
+    while (nodeCopy->left != NULL && nodeCopy->right != NULL) {
+      int curFeature = nodeCopy->featureIndex;
+      if (xTe[curFeature][j] <= nodeCopy->cutoff) {
+        nodeCopy = nodeCopy->left;
+      } else {
+        nodeCopy = nodeCopy->right;
+      }
+    }
+    ans.push_back(nodeCopy->prediction);
+  }
+  return ans;
 }
