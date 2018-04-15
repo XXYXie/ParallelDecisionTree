@@ -4,8 +4,8 @@
 #include <math.h>
 #include <unordered_map>
 
-// #include <cilk/cilk.h>
-// #include <cilk/cilk_api.h>
+#include <cilk/cilk.h>
+#include <cilk/cilk_api.h>
 
 using namespace std;
 
@@ -218,11 +218,11 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
   // cilk_spawn
   parent->left = new Node();
   parent->right = new Node();
-  buildTree(parent->left, depth + 1, labels, features,
+  cilk_spawn buildTree(parent->left, depth + 1, labels, features,
                                     leftIndexConst, featureIndex, leftWeights);
   buildTree(parent->right, depth + 1, labels, features, rightIndexConst,
                           featureIndex, rightWeights);
-  // cilk_sync;
+  cilk_sync;
   return;
 }
 
