@@ -23,11 +23,14 @@ vector<int> sortIndexes(vector<double> &v) {
   return idx;
 }
 
-int mode(int *y, const vector<int> &index) {
+int mode(vector<int> &y, int size) {
   unordered_map<int, int> hashMap;
-  for (auto iter = index.begin(); iter != index.end(); ++iter) {
-    // cout << y[*iter] << " ";
-    hashMap[y[*iter]] += 1;
+  // for (auto iter = index.begin(); iter != index.end(); ++iter) {
+  //   // cout << y[*iter] << " ";
+  //   hashMap[y[*iter]] += 1;
+  // }
+  for (int i = 0; i < size; ++i) {
+    hashMap[y[i]] += 1;
   }
 
   int curMax = 0;
@@ -136,20 +139,20 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
   int featureSize = features.size();
   int labelSize = labels.size();
 
-  int *y = (int *)malloc(labelSize * sizeof(int));
-  double *x = (double *)malloc(featureSize * labelSize * sizeof(double));
+  // int *y = (int *)malloc(labelSize * sizeof(int));
+  // double *x = (double *)malloc(featureSize * labelSize * sizeof(double));
 
   vector<int> yCopy;
   set<int> setY;
   for (auto iter = index.begin(); iter != index.end(); ++iter) {
     int m = *iter;
-    y[m] = labels[m];
+    // y[m] = labels[m];
     setY.insert(labels[m]);
     yCopy.push_back(labels[m]);
   }
 
   if (depth > MAXDEPTH || setY.size() == 1) {
-    parent->prediction = mode(y, index);
+    parent->prediction = mode(yCopy, indexSize);
     return;
   }
 
@@ -160,7 +163,7 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
     vector<double> curVector;
     for (auto iter2 = index.begin(); iter2 != index.end(); ++iter2) {
       int j = *iter2;
-      x[i * labels.size() + j] = features[i][j];
+      // x[i * labels.size() + j] = features[i][j];
       curVector.push_back(features[i][j]);
     }
     xCopy.push_back(curVector);
@@ -168,8 +171,7 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
 
   // TODO: check x.
 
-  EntropySplitOutput *splitOutput =
-      entropySplit(xCopy, yCopy, weights);
+  EntropySplitOutput *splitOutput = entropySplit(xCopy, yCopy, weights);
 
   int selectedFeatureIndex = splitOutput->feature;
   // cout << "selectedFeatureIndex: " << selectedFeatureIndex << endl;
@@ -178,13 +180,13 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
   // cout << "splitVal: " << splitVal << endl;
   // Node *node = new Node();
   // node->parent = parent;
-  parent->prediction = mode(y, index);
+  parent->prediction = mode(yCopy, indexSize);
   // cout << "parent->prediction: " << parent->prediction << endl;
   parent->featureIndex = selectedFeatureIndex;
   parent->cutoff = splitVal;
 
-  delete []y;
-  delete []x;
+  // delete []y;
+  // delete []x;
 
   vector<int> leftIndex, rightIndex;
   vector<double> leftWeights, rightWeights;
