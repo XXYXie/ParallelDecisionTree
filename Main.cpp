@@ -54,8 +54,6 @@ vector<int> getOrigIndex(const vector<int> labels ) {
   }
   return origIndex;
 }
-// vector<int> labels;
-// vector<vector<double>> features;
 
 int main(int argv, char **argc) {
   printf("Main. \n");
@@ -64,23 +62,13 @@ int main(int argv, char **argc) {
 
   const vector<int> origIndex = getOrigIndex(labels);
 
-  vector<int> origFeatureIndex;
-  for (int j = 0; j < features.size(); ++j) {
-    origFeatureIndex.push_back(j);
-  }
-  // cout << "orig feature index start: " << endl;
-  // for (auto i = origFeatureIndex.begin(); i != origFeatureIndex.end(); ++i) {
-  //   cout << *i << " ";
-  // }
-  // cout << "\norig feature index end " << endl;
-
   vector<double> weights;
   for (int i = 0; i < labels.size(); ++i) {
     weights.push_back(1.0);
   }
 
   Node *root = new Node();
-  buildTree(root, 1, labels, features, origIndex, origFeatureIndex, weights);
+  buildTree(root, 1, labels, features, origIndex, weights);
 
   vector<int> labelsTest = readY("./data/yTe.csv");
   vector<vector<double> > featuresTest = readX("./data/xTe.csv");
