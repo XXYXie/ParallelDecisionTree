@@ -27,8 +27,15 @@ struct EntropySplitOutput {
   // Loss of best splitVal.
   // double loss;
 };
+
+struct rfOutput {
+  Node** nodes;
+  vector<vector<int>> selectedFeatures;
+};
+
 void buildTree(Node *parent, int depth, const vector<int> &labels,
                const vector<vector<double>> &features, const vector<int> &index,
-               vector<double> &weights);
+               vector<int> &featureIndex, vector<double> &weights);
 vector<int> evalTree(Node *node, vector<vector<double> > &xTe);
+vector<int> sampleWithReplacement(int total, int size);
 #endif

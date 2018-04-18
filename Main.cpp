@@ -67,8 +67,13 @@ int main(int argv, char **argc) {
     weights.push_back(1.0);
   }
 
+  vector<int> origFeatureIndex;
+  for (int j = 0; j < features.size(); ++j) {
+    origFeatureIndex.push_back(j);
+  }
+
   Node *root = new Node();
-  buildTree(root, 1, labels, features, origIndex, weights);
+  buildTree(root, 1, labels, features, origIndex, origFeatureIndex, weights);
 
   vector<int> labelsTest = readY("./data/yTe.csv");
   vector<vector<double> > featuresTest = readX("./data/xTe.csv");

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <math.h>
 #include <unordered_map>
+#include <chrono>
 
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
@@ -46,21 +47,24 @@ int mode(vector<int> &y, int size) {
 }
 
 EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
+                                 vector<int> &featureIndex,
                                  vector<double> &weights) {
   int numData = yTr.size();
-  int numFeature = xTr.size();
+  int indexArr[featureIndex.size()];
+  for (int i = 0; i < featureIndex.size(); ++i) {
+    indexArr[i] = featureIndex[i];
+  }
 
   set<int> uniqueY;
   for (int i = 0; i < numData; i++) {
     uniqueY.insert(yTr[i]);
   }
-
-  int bestFeature = 0;
+  // cout << "\nbefore sort end" << endl;
+  int bestFeature = *featureIndex.begin();
   double bestSplitVal = 0.0;
   double maxEntropy = - std::numeric_limits<double>::infinity();
 
-  for (int i = 0; i < numFeature; ++i) {
-  // for (auto iter = featureIndex.begin(); iter != featureIndex.end(); ++iter) {
+  for (int i = 0; i < featureIndex.size(); ++i) {
     // int i = *iter;
     // cout << "i: " << i << endl;
 
@@ -125,7 +129,7 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
     }
   }
   EntropySplitOutput *output = new EntropySplitOutput();
-  output->feature = bestFeature;
+  output->feature = indexArr[bestFeature];
   output->splitVal = bestSplitVal;
   return output;
 }
@@ -133,7 +137,7 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
 // Recursively build
 void buildTree(Node *parent, int depth, const vector<int> &labels,
                const vector<vector<double>> &features, const vector<int> &index,
-               vector<double> &weights) {
+               vector<int> &featureIndex, vector<double> &weights) {
   // x, y values.
   int indexSize = index.size();
   int featureSize = features.size();
@@ -159,7 +163,9 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
   // if (parent == NULL) parent = new Node();
 
   vector<vector<double>> xCopy;
-  for (int i = 0; i < featureSize; ++i) {
+  for (auto iter = featureIndex.begin(); iter != featureIndex.end(); ++iter) {
+    int i = *iter;
+  // for (int i = 0; i < featureSize; ++i) {
     vector<double> curVector;
     for (auto iter2 = index.begin(); iter2 != index.end(); ++iter2) {
       int j = *iter2;
@@ -171,7 +177,7 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
 
   // TODO: check x.
 
-  EntropySplitOutput *splitOutput = entropySplit(xCopy, yCopy, weights);
+  EntropySplitOutput *splitOutput = entropySplit(xCopy, yCopy, featureIndex, weights);
 
   int selectedFeatureIndex = splitOutput->feature;
   // cout << "selectedFeatureIndex: " << selectedFeatureIndex << endl;
@@ -211,9 +217,9 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
   parent->right = new Node();
   // cilk_spawn
   cilk_spawn buildTree(parent->left, depth + 1, labels, features,
-                       leftIndexConst, leftWeights);
+                       leftIndexConst, featureIndex, leftWeights);
   buildTree(parent->right, depth + 1, labels, features, rightIndexConst,
-            rightWeights);
+            featureIndex, rightWeights);
   cilk_sync;
   return;
 }
@@ -234,4 +240,92 @@ vector<int> evalTree(Node *node, vector<vector<double>> &xTe) {
     ans.push_back(nodeCopy->prediction);
   }
   return ans;
+}
+
+// Can't use std::sample because it requires gcc 7.1
+vector<int> sampleWithReplacement(int total, int size) {
+  vector<int> ans;
+  for (int i = 0; i < size; ++i) {
+    int randomNum = rand() % total;
+    ans.push_back(randomNum);
+  }
+  return ans;
+}
+
+rfOutput* randomForest(const vector<vector<double>> x, const vector<int> y, int k, int nt) {
+  Node** ans = (Node **)malloc(sizeof(Node*) * nt);
+  vector<double> weights;
+  vector<int> featureIndex;
+  vector<vector<int>> selectedFeatures;
+  vector<int> index;
+  int numFeature = x.size();
+  int numData = y.size();
+
+  for (int i = 0; i < numData; ++i) {
+    index.push_back(i);
+  }
+
+  for (int i = 0; i < numFeature; ++i) {
+    featureIndex.push_back(i);
+  }
+
+  for (int i = 0; i < nt; ++nt) {
+    // Sample k feature without replacement.
+    vector<int> sampleFeature;
+    // obtain a time-based seed:
+    unsigned seed = chrono::system_clock::now().time_since_epoch().count();
+    shuffle(featureIndex.begin(), featureIndex.end(), default_random_engine(seed));
+    for (int j = 0; j < k; ++j) {
+      sampleFeature.push_back(featureIndex[j]);
+    }
+    selectedFeatures.push_back(sampleFeature);
+
+    // Sample numData data.
+    const vector<int> sampleData = sampleWithReplacement(numData, numData);
+    vector<vector<double>> newX;
+    vector<int> newY;
+    for (auto m = sampleFeature.begin(); m != sampleFeature.end(); ++m) {
+      vector<double> tmpX;
+      for (auto n = sampleData.begin(); n != sampleData.end(); ++n) {
+        tmpX.push_back(x[*m][*n]);
+      }
+      newX.push_back(tmpX);
+    }
+
+    for (auto n = sampleData.begin(); n != sampleData.end(); ++n) {
+      newY.push_back(y[*n]);
+    }
+
+    Node *node = NULL;
+    buildTree(node, 1, newY, newX, index, sampleFeature, weights);
+    ans[i] = node;
+  }
+  rfOutput *output = new rfOutput();
+  output->nodes = ans;
+  output->selectedFeatures = selectedFeatures;
+  return output;
+}
+
+vector<int> evalForest(rfOutput* forestOutput, int nt, vector<vector<double>> &xTe) {
+  vector<vector<int>> ans;
+  Node **treeArr = forestOutput->nodes;
+  vector<vector<int>> selectedFeatures = forestOutput->selectedFeatures;
+
+  for (int i = 0; i < nt; ++i) {
+    Node *tree = treeArr[i];
+    vector<int> treeEval = evalTree(tree, xTe);
+    ans.push_back(treeEval);
+  }
+
+  int numCol = ans[0].size();
+  int numRow = ans.size();
+  vector<int> pred;
+  for (int j = 0; j < numCol; ++j) {
+    vector<int> curColumn;
+    for (int i = 0; i < numRow; ++i) {
+      curColumn.push_back(ans[i][j]);
+    }
+    pred.push_back(mode(curColumn, numCol));
+  }
+  return pred;
 }
