@@ -175,8 +175,6 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
     xCopy.push_back(curVector);
   }
 
-  // TODO: check x.
-
   EntropySplitOutput *splitOutput = entropySplit(xCopy, yCopy, featureIndex, weights);
 
   int selectedFeatureIndex = splitOutput->feature;

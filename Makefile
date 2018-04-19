@@ -14,7 +14,7 @@ all: decisionTree
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-decisionTree: Main.o DecisionTree.o
+decisionTree: Main.o DecisionTree.o ktiming.o
 #	$(CXX) Main.o DecisionTree.o -o decisionTree
 	$(CXX) -o $@ $^ $(LIBS)
 

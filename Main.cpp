@@ -1,4 +1,5 @@
 #include "DecisionTree.h"
+#include "ktiming.h"
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -73,7 +74,12 @@ int main(int argv, char **argc) {
   }
 
   Node *root = new Node();
+  
+  clockmark_t begin_rm = ktiming_getmark();
   buildTree(root, 1, labels, features, origIndex, origFeatureIndex, weights);
+  clockmark_t end_rm = ktiming_getmark();
+
+  printf("Elapsed time in seconds: %f\n", ktiming_diff_sec(&begin_rm, &end_rm));
 
   vector<int> labelsTest = readY("./data/yTe.csv");
   vector<vector<double> > featuresTest = readX("./data/xTe.csv");
