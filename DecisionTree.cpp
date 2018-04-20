@@ -136,7 +136,7 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
 }
 
 // Recursively build
-void buildTree(Node *parent, int depth, const vector<int> &labels,
+void buildTree(Node *currentNode, int depth, const vector<int> &labels,
                const vector<vector<double>> &features, const vector<int> &index,
                vector<int> &featureIndex, vector<double> &weights) {
   // x, y values.
@@ -148,21 +148,27 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
   // double *x = (double *)malloc(featureSize * labelSize * sizeof(double));
 
   vector<int> yCopy;
-  set<int> setY;
+  set<int> uniqueY;
   if (index.size() == 0) return;
   for (auto iter = index.begin(); iter != index.end(); ++iter) {
     int m = *iter;
     // y[m] = labels[m];
-    setY.insert(labels[m]);
+    uniqueY.insert(labels[m]);
     yCopy.push_back(labels[m]);
   }
 
-  if (depth > MAXDEPTH || setY.size() == 1) {
-    parent->prediction = mode(yCopy, indexSize);
+  // y labels are the same. Return the uniqueY as the prediction of the current node
+  if (uniqueY.size() == 1) {
+    currentNode->prediction = *uniqueY.begin();
     return;
   }
 
-  // if (parent == NULL) parent = new Node();
+  if (depth > MAXDEPTH) {
+    currentNode->prediction = mode(yCopy, indexSize);
+    return;
+  }
+
+  // if (currentNode == NULL) currentNode = new Node();
 
   vector<vector<double>> xCopy;
   for (auto iter = featureIndex.begin(); iter != featureIndex.end(); ++iter) {
@@ -185,11 +191,11 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
   // cout << "numX: " << indexSize << endl;
   // cout << "splitVal: " << splitVal << endl;
   // Node *node = new Node();
-  // node->parent = parent;
-  parent->prediction = mode(yCopy, indexSize);
-  // cout << "parent->prediction: " << parent->prediction << endl;
-  parent->featureIndex = selectedFeatureIndex;
-  parent->cutoff = splitVal;
+  // node->currentNode = currentNode;
+  currentNode->prediction = mode(yCopy, indexSize);
+  // cout << "currentNode->prediction: " << currentNode->prediction << endl;
+  currentNode->featureIndex = selectedFeatureIndex;
+  currentNode->cutoff = splitVal;
 
   // delete []y;
   // delete []x;
@@ -213,12 +219,12 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
   // std::vector<int>::iterator position = std::find(featureIndex.begin(), featureIndex.end(), selectedFeatureIndex);
   // if (position != featureIndex.end())  featureIndex.erase(position);
 
-  parent->left = new Node();
-  parent->right = new Node();
+  currentNode->left = new Node();
+  currentNode->right = new Node();
   // cilk_spawn
-  cilk_spawn buildTree(parent->left, depth + 1, labels, features,
+  cilk_spawn buildTree(currentNode->left, depth + 1, labels, features,
                        leftIndexConst, featureIndex, leftWeights);
-  buildTree(parent->right, depth + 1, labels, features, rightIndexConst,
+  buildTree(currentNode->right, depth + 1, labels, features, rightIndexConst,
             featureIndex, rightWeights);
   cilk_sync;
   return;
