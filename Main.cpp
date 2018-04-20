@@ -61,6 +61,38 @@ int main(int argv, char **argc) {
   const vector<int> labels = readY("./data/yTr.csv");
   const vector<vector<double> > features = readX("./data/xTr.csv");
 
+// Read in letter.
+  // vector<int> labels;
+  // vector<vector<double>> features;
+  //
+  // ifstream infile("./data/letter.txt");
+  //
+  // while (infile) {
+  //   string s;
+  //   if (!getline(infile, s))
+  //     break;
+  //   istringstream ss(s);
+  //   vector<double> record;
+  //   int count = 0;
+  //   while (ss) {
+  //     string s;
+  //     if (!getline(ss, s, ','))
+  //       break;
+  //     if (count == 0) {
+  //       const char *cur = s.c_str();
+  //       labels.push_back(cur[0] - 65);
+  //     } else {
+  //       record.push_back(stod(s));
+  //     }
+  //     count++;
+  //   }
+  //   features.push_back(record);
+  // }
+  //
+  // if (!infile.eof()){
+  //   cerr << "EOF\n";
+  // }
+
   const vector<int> origIndex = getOrigIndex(labels);
 
   vector<double> weights;
@@ -74,7 +106,7 @@ int main(int argv, char **argc) {
   }
 
   Node *root = new Node();
-  
+
   clockmark_t begin_rm = ktiming_getmark();
   buildTree(root, 1, labels, features, origIndex, origFeatureIndex, weights);
   clockmark_t end_rm = ktiming_getmark();

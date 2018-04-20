@@ -4,13 +4,14 @@
 #include <math.h>
 #include <unordered_map>
 #include <chrono>
+#include <random>
 
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 
 using namespace std;
 
-#define MAXDEPTH 6
+#define MAXDEPTH 20
 
 vector<int> sortIndexes(vector<double> &v) {
   // initialize original index locations
@@ -50,10 +51,10 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
                                  vector<int> &featureIndex,
                                  vector<double> &weights) {
   int numData = yTr.size();
-  int indexArr[featureIndex.size()];
-  for (int i = 0; i < featureIndex.size(); ++i) {
-    indexArr[i] = featureIndex[i];
-  }
+  // int indexArr[featureIndex.size()];
+  // for (int i = 0; i < featureIndex.size(); ++i) {
+  //   indexArr[i] = featureIndex[i];
+  // }
 
   set<int> uniqueY;
   for (int i = 0; i < numData; i++) {
@@ -64,10 +65,10 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
   double bestSplitVal = 0.0;
   double maxEntropy = - std::numeric_limits<double>::infinity();
 
-  for (int i = 0; i < featureIndex.size(); ++i) {
+  for (int featureI = 0; featureI < featureIndex.size(); ++featureI) {
     // int i = *iter;
     // cout << "i: " << i << endl;
-
+    int i = featureIndex[featureI];
     vector<int> sortedIndex = sortIndexes(xTr[i]);
 
     // cout << "feature i: " << i << endl;
@@ -129,7 +130,7 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
     }
   }
   EntropySplitOutput *output = new EntropySplitOutput();
-  output->feature = indexArr[bestFeature];
+  output->feature = bestFeature;
   output->splitVal = bestSplitVal;
   return output;
 }
@@ -148,6 +149,7 @@ void buildTree(Node *parent, int depth, const vector<int> &labels,
 
   vector<int> yCopy;
   set<int> setY;
+  if (index.size() == 0) return;
   for (auto iter = index.begin(); iter != index.end(); ++iter) {
     int m = *iter;
     // y[m] = labels[m];

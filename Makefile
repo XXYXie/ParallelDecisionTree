@@ -1,9 +1,10 @@
 CC=/project/cec/class/cse539/tapir/build/bin/clang
-CXX=/project/cec/class/cse539/tapir/build/bin/clang++
+# CXX=/project/cec/class/cse539/tapir/build/bin/clang++
+CXX=g++
 CILK_LIBS=/project/linuxlab/gcc/6.4/lib64
 
 CFLAGS = -ggdb -O3 -fcilkplus
-CXXFLAGS = -ggdb -std=c++11 -O3 -fcilkplus
+CXXFLAGS = -c -std=c++11 -O3 -fcilkplus
 LIBS = -L$(CILK_LIBS) -Wl,-rpath -Wl,$(CILK_LIBS) -lcilkrts -lpthread -lrt -lm
 
 INST_RTS_LIBS=/project/cec/class/cse539/inst-cilkplus-rts/lib
