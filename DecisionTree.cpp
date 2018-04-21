@@ -1,4 +1,5 @@
 #include "DecisionTree.h"
+#include "sort.h"
 #include <set>
 #include <algorithm>
 #include <math.h>
@@ -13,16 +14,9 @@ using namespace std;
 
 #define MAXDEPTH 20
 
-vector<int> sortIndexes(vector<double> &v) {
-  // initialize original index locations
-  vector<int> idx(v.size());
-  iota(idx.begin(), idx.end(), 0);
-
-  // sort indexes based on comparing values in v
-  sort(idx.begin(), idx.end(),
-       [&v](int i1, int i2) {return v[i1] < v[i2];});
-
-  return idx;
+bool pairCompare(const pair<double, int> &firstElem,
+                 const pair<double, int> &secondElem) {
+  return firstElem.first < secondElem.first;
 }
 
 int mode(vector<int> &y, int size) {
@@ -65,45 +59,48 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
   double bestSplitVal = 0.0;
   double maxEntropy = - std::numeric_limits<double>::infinity();
 
-  for (int featureI = 0; featureI < featureIndex.size(); ++featureI) {
+  cilk_for (int featureI = 0; featureI < featureIndex.size(); ++featureI) {
     // int i = *iter;
-    // cout << "i: " << i << endl;
     int i = featureIndex[featureI];
-    vector<int> sortedIndex = sortIndexes(xTr[i]);
+    // vector<int> sortedIndex = sortIndexes(xTr[i]);
 
-    // cout << "feature i: " << i << endl;
-
-    vector<double> sx;
-    vector<int> sy;
-    vector<double> sw;
-
-    for (auto indexIter = sortedIndex.begin(); indexIter != sortedIndex.end(); ++indexIter) {
-      int j = *indexIter;
-      sx.push_back(xTr[i][j]);
-      sy.push_back(yTr[j]);
-      //sw.push_back(w[j]);
+    // a pair of x and its corresponding label y.
+    vector<pair<double, int>> xyPair;
+    for (int k = 0; k < numData; ++k) {
+      double key = xTr[i][k];
+      int val = yTr[k];
+      xyPair.push_back(make_pair(key, val));
     }
 
-    for (int j = 0; j < numData - 1; ++j) {
-      // cout << "yaftersort: " << yTr[j] << endl;
+    // From https://software.intel.com/en-us/articles/parallel-sorts-for-cilk-plus
+    cilkpub::cilk_sort_in_place (xyPair.begin(), xyPair.end(), pairCompare);
 
-      // cout << "j: " << j << endl;
-      // cout << "xaftersort: " << xTr[i][j] << endl;
-      // cout << j << " "<< yTr[j] << endl;
-      if (sy[j + 1] != sy[j]) {
+    // vector<double> sx;
+    // vector<int> sy;
+    // vector<double> sw;
+
+    // for (auto indexIter = sortedIndex.begin(); indexIter != sortedIndex.end(); ++indexIter) {
+    //   int j = *indexIter;
+    //   sx.push_back(xTr[i][j]);
+    //   sy.push_back(yTr[j]);
+    //   //sw.push_back(w[j]);
+    // }
+
+    for (int j = 0; j < numData - 1; ++j) {
+
+      if (xyPair[j + 1].second != xyPair[j].second) {
         double leftEntropy = 0.0;
         double rightEntropy = 0.0;
-        // cout << "diff j: " << j << endl;
-        // cout << "sy[j]: " << sy[j] << " sy[j+1]: " << sy[j+1] << endl;
+
         for (set<int>::iterator it = uniqueY.begin(); it != uniqueY.end(); ++it) {
           int curY = *it;
           int leftYCount = 0;
           int rightYCount = 0;
           for (int k = 0; k <= j; ++k) {
-            if (sy[k] == curY) leftYCount++;
+            if (xyPair[j].second == curY) leftYCount++;
           }
           for (int k = j + 1; k < numData; ++k) {
-            if (sy[k] == curY) rightYCount++;
+            if (xyPair[j].second == curY) rightYCount++;
           }
           double pLeft = 1.0 * leftYCount / (j+1);
           double pRight = 1.0 * rightYCount / (numData - j - 1);
@@ -121,8 +118,7 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
         // cout << "curEntropy: " << curEntropy << endl;
         if (curEntropy > maxEntropy) {
           maxEntropy = curEntropy;
-          // bestSplitVal = (xTr[i][j + 1] + xTr[i][j]) / 2;
-          bestSplitVal = (sx[j+1] + sx[j]) / 2;
+          bestSplitVal = (xyPair[j+1].first + xyPair[j].first) / 2;
           bestFeature = i;
           // cout << "cur best feature: " << bestFeature << endl;
         }
