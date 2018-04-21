@@ -26,6 +26,28 @@ vector<int> readY(const string&  filename) {
   return labels;
 }
 
+vector<int> readYLetter(const string&  filename) {
+  // Read in labels from y training data.
+  vector<int> labels;
+  ifstream file(filename.c_str());
+  if (!file.is_open()) {
+    cout << "Error opening file y. " << endl;
+  }
+
+  string line;
+  while (getline(file, line)) {
+    stringstream lineStream(line);
+    string cell;
+    while (std::getline(lineStream, cell, ',')) {
+      const char *cur = cell.c_str();
+      // cout << cur[0] << endl;
+      labels.push_back(cur[0] - 65);
+    }
+  }
+  file.close();
+  return labels;
+}
+
 vector<vector<double> > readX(const string&  filename) {
   // Read in features from x training data.
   vector<vector<double> > features;
@@ -58,42 +80,12 @@ vector<int> getOrigIndex(const vector<int> labels ) {
 
 int main(int argv, char **argc) {
   printf("Main. \n");
-  const vector<int> labels = readY("./data/yTr.csv");
-  const vector<vector<double> > features = readX("./data/xTr.csv");
+  // const vector<int> labels = readY("./data/yTr.csv");
+  // const vector<vector<double> > features = readX("./data/xTr.csv");
+  const vector<int> labels = readYLetter("./data/letter_yTr15000.csv");
+  vector<vector<double> > features = readX("./data/letter_xTr15000.csv");
 
-// Read in letter.
-  // vector<int> labels;
-  // vector<vector<double>> features;
-  //
-  // ifstream infile("./data/letter.txt");
-  //
-  // while (infile) {
-  //   string s;
-  //   if (!getline(infile, s))
-  //     break;
-  //   istringstream ss(s);
-  //   vector<double> record;
-  //   int count = 0;
-  //   while (ss) {
-  //     string s;
-  //     if (!getline(ss, s, ','))
-  //       break;
-  //     if (count == 0) {
-  //       const char *cur = s.c_str();
-  //       labels.push_back(cur[0] - 65);
-  //     } else {
-  //       record.push_back(stod(s));
-  //     }
-  //     count++;
-  //   }
-  //   features.push_back(record);
-  // }
-  //
-  // if (!infile.eof()){
-  //   cerr << "EOF\n";
-  // }
-
-  const vector<int> origIndex = getOrigIndex(labels);
+  vector<int> origIndex = getOrigIndex(labels);
 
   vector<double> weights;
   for (int i = 0; i < labels.size(); ++i) {
@@ -113,8 +105,11 @@ int main(int argv, char **argc) {
 
   printf("Elapsed time in seconds: %f\n", ktiming_diff_sec(&begin_rm, &end_rm));
 
-  vector<int> labelsTest = readY("./data/yTe.csv");
-  vector<vector<double> > featuresTest = readX("./data/xTe.csv");
+  // vector<int> labelsTest = readY("./data/yTe.csv");
+  // vector<vector<double> > featuresTest = readX("./data/xTe.csv");
+  vector<int> labelsTest = readYLetter("./data/letter_yTe5000.csv");
+  vector<vector<double> > featuresTest = readX("./data/letter_xTe5000.csv");
+
   vector<int> pred = evalTree(root, featuresTest);
   int numTest = labelsTest.size();
   int same = 0;

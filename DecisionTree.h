@@ -34,7 +34,7 @@ struct rfOutput {
 };
 
 void buildTree(Node *parent, int depth, const vector<int> &labels,
-               const vector<vector<double>> &features, const vector<int> &index,
+               vector<vector<double>> &features, vector<int> &index,
                vector<int> &featureIndex, vector<double> &weights);
 vector<int> evalTree(Node *node, vector<vector<double> > &xTe);
 vector<int> sampleWithReplacement(int total, int size);

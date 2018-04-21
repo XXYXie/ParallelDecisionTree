@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <chrono>
 #include <random>
+#include <atomic>
 
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
@@ -45,19 +46,18 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
                                  vector<int> &featureIndex,
                                  vector<double> &weights) {
   int numData = yTr.size();
-  // int indexArr[featureIndex.size()];
-  // for (int i = 0; i < featureIndex.size(); ++i) {
-  //   indexArr[i] = featureIndex[i];
-  // }
 
   set<int> uniqueY;
   for (int i = 0; i < numData; i++) {
     uniqueY.insert(yTr[i]);
   }
-  // cout << "\nbefore sort end" << endl;
-  int bestFeature = *featureIndex.begin();
-  double bestSplitVal = 0.0;
-  double maxEntropy = - std::numeric_limits<double>::infinity();
+
+  atomic<int> bestFeature(*featureIndex.begin());
+  atomic<double> bestSplitVal(0.0);
+  atomic<double> maxEntropy (- std::numeric_limits<double>::infinity());
+  // int bestFeature = *featureIndex.begin();
+  // double bestSplitVal = 0.0;
+  // double maxEntropy = - std::numeric_limits<double>::infinity();
 
   cilk_for (int featureI = 0; featureI < featureIndex.size(); ++featureI) {
     // int i = *iter;
@@ -74,7 +74,10 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
 
     // From https://software.intel.com/en-us/articles/parallel-sorts-for-cilk-plus
     cilkpub::cilk_sort_in_place (xyPair.begin(), xyPair.end(), pairCompare);
-
+    // cout << "numData: " << numData << endl;
+    // for (auto iter = xyPair.begin(); iter != xyPair.end(); ++iter) {
+    //   cout << "x: " << iter->first << " y: " << iter->second << endl;
+    // }
     // vector<double> sx;
     // vector<int> sy;
     // vector<double> sw;
@@ -86,9 +89,10 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
     //   //sw.push_back(w[j]);
     // }
 
-    for (int j = 0; j < numData - 1; ++j) {
+    cilk_for (int j = 0; j < numData - 1; ++j) {
 
       if (xyPair[j + 1].second != xyPair[j].second) {
+        // cout << "j: " << j << endl;
         double leftEntropy = 0.0;
         double rightEntropy = 0.0;
 
@@ -97,21 +101,24 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
           int leftYCount = 0;
           int rightYCount = 0;
           for (int k = 0; k <= j; ++k) {
-            if (xyPair[j].second == curY) leftYCount++;
+            if (xyPair[k].second == curY) leftYCount++;
           }
           for (int k = j + 1; k < numData; ++k) {
-            if (xyPair[j].second == curY) rightYCount++;
+            if (xyPair[k].second == curY) rightYCount++;
           }
           double pLeft = 1.0 * leftYCount / (j+1);
           double pRight = 1.0 * rightYCount / (numData - j - 1);
-          // cout << "pLeft:" << pLeft << " pRight: " << pRight << " ";
+          // if (leftYCount != 0 || rightYCount != 0) {
+          //   cout << "leftCount:" << leftYCount << " rightCount: " << rightYCount << " ";
+          // }
+          // if (pLeft != 0 || pRight != 0) cout << "pLeft:" << pLeft << " pRight: " << pRight << " ";
           if (leftYCount != 0) {
             leftEntropy += -pLeft * log2 (pLeft);
           }
           if (rightYCount != 0) {
             rightEntropy += -pRight * log2 (pRight);
           }
-          // cout << "left: " << leftEntropy << " right: " << rightEntropy << endl;
+          // cout << "entropy left: " << leftEntropy << " right: " << rightEntropy << endl;
         }
 
         double curEntropy = - 1.0 * (j+1) / numData * leftEntropy - 1.0 * (numData - j - 1) / numData * rightEntropy;
@@ -133,7 +140,7 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
 
 // Recursively build
 void buildTree(Node *currentNode, int depth, const vector<int> &labels,
-               const vector<vector<double>> &features, const vector<int> &index,
+               vector<vector<double>> &features, vector<int> &index,
                vector<int> &featureIndex, vector<double> &weights) {
   // x, y values.
   int indexSize = index.size();
@@ -145,7 +152,10 @@ void buildTree(Node *currentNode, int depth, const vector<int> &labels,
 
   vector<int> yCopy;
   set<int> uniqueY;
-  if (index.size() == 0) return;
+  if (index.size() == 0) {
+    currentNode->prediction = 30;
+    return;
+  }
   for (auto iter = index.begin(); iter != index.end(); ++iter) {
     int m = *iter;
     // y[m] = labels[m];
@@ -195,23 +205,19 @@ void buildTree(Node *currentNode, int depth, const vector<int> &labels,
 
   // delete []y;
   // delete []x;
-
   vector<int> leftIndex, rightIndex;
-  vector<double> leftWeights, rightWeights;
+  // vector<double> leftWeights, rightWeights;
   for (auto iter = index.begin(); iter != index.end(); ++iter){
     int i = *iter;
     if (features[selectedFeatureIndex][i] <= splitVal) {
       leftIndex.push_back(i);
-      leftWeights.push_back(weights[i]);
+      // leftWeights.push_back(weights[i]);
     } else {
       rightIndex.push_back(i);
-      rightWeights.push_back(weights[i]);
+      // rightWeights.push_back(weights[i]);
     }
   }
-
-  const vector<int> leftIndexConst = leftIndex;
-  const vector<int> rightIndexConst = rightIndex;
-
+  // cout << "after left right index" << endl;
   // std::vector<int>::iterator position = std::find(featureIndex.begin(), featureIndex.end(), selectedFeatureIndex);
   // if (position != featureIndex.end())  featureIndex.erase(position);
 
@@ -219,9 +225,9 @@ void buildTree(Node *currentNode, int depth, const vector<int> &labels,
   currentNode->right = new Node();
   // cilk_spawn
   cilk_spawn buildTree(currentNode->left, depth + 1, labels, features,
-                       leftIndexConst, featureIndex, leftWeights);
-  buildTree(currentNode->right, depth + 1, labels, features, rightIndexConst,
-            featureIndex, rightWeights);
+                       leftIndex, featureIndex, weights);
+  buildTree(currentNode->right, depth + 1, labels, features, rightIndex,
+            featureIndex, weights);
   cilk_sync;
   return;
 }
