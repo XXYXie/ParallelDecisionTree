@@ -82,8 +82,8 @@ int main(int argv, char **argc) {
   printf("Main. \n");
   // const vector<int> labels = readY("./data/yTr.csv");
   // const vector<vector<double> > features = readX("./data/xTr.csv");
-  const vector<int> labels = readYLetter("./data/letter_yTr15000.csv");
-  vector<vector<double> > features = readX("./data/letter_xTr15000.csv");
+  const vector<int> labels = readYLetter("./data/letter_yTr100.csv");
+  vector<vector<double> > features = readX("./data/letter_xTr100.csv");
 
   vector<int> origIndex = getOrigIndex(labels);
 
@@ -107,18 +107,18 @@ int main(int argv, char **argc) {
 
   // vector<int> labelsTest = readY("./data/yTe.csv");
   // vector<vector<double> > featuresTest = readX("./data/xTe.csv");
-  vector<int> labelsTest = readYLetter("./data/letter_yTe5000.csv");
-  vector<vector<double> > featuresTest = readX("./data/letter_xTe5000.csv");
-
-  vector<int> pred = evalTree(root, featuresTest);
-  int numTest = labelsTest.size();
-  int same = 0;
-  for (int i = 0; i < numTest; ++i) {
-    if (labelsTest[i] == pred[i]) {
-      same++;
-    }
-  }
-  double accuracy = 1.0 * same / numTest;
-  cout << "accuracy: " << accuracy << endl;
+  // vector<int> labelsTest = readYLetter("./data/letter_yTe300.csv");
+  // vector<vector<double> > featuresTest = readX("./data/letter_xTe300.csv");
+  //
+  // vector<int> pred = evalTree(root, featuresTest);
+  // int numTest = labelsTest.size();
+  // int same = 0;
+  // for (int i = 0; i < numTest; ++i) {
+  //   if (labelsTest[i] == pred[i]) {
+  //     same++;
+  //   }
+  // }
+  // double accuracy = 1.0 * same / numTest;
+  // cout << "accuracy: " << accuracy << endl;
   return 0;
 }
