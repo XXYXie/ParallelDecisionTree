@@ -11,9 +11,9 @@
 
 #include "DecisionTree.h"
 
-#define W 1
+#define W 16
 #define THRESHOLD 0.01
-#define Bt 1000
+#define Bt 1500
 
 using namespace std;
 

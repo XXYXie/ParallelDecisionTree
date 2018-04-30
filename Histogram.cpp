@@ -218,6 +218,9 @@ Node* histTree(vector<vector<double>> x, vector<int> y) {
 
       // cout << "bestSplitVal: " << bestSplitVal << endl;
       // cout << "bestFeature: " << bestFeature << endl;
+      curHistNode->node->featureIndex = bestFeature;
+      curHistNode->node->cutoff = bestSplitVal;
+
       Node *leftChild = new Node();
       Node *rightChild = new Node();
       curHistNode->node->left = leftChild;
