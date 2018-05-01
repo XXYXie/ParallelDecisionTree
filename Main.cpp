@@ -80,42 +80,44 @@ vector<int> getOrigIndex(const vector<int> labels ) {
 
 int main(int argv, char **argc) {
   printf("Main. \n");
-  // const vector<int> labels = readY("./data/yTr.csv");
-  // const vector<vector<double>> features = readX("./data/xTr.csv");
-  const vector<int> labels = readYLetter("./data/letter_yTr15000.csv");
-  vector<vector<double>> features = readX("./data/letter_xTr15000.csv");
-  clockmark_t begin_rm = ktiming_getmark();
-  Node *root = histTree(features, labels);
-  clockmark_t end_rm = ktiming_getmark();
-  printf("Elapsed time in seconds: %f\n", ktiming_diff_sec(&begin_rm, &end_rm));
-
-  // vector<int> origIndex = getOrigIndex(labels);
-  //
-  // vector<double> weights;
-  // for (int i = 0; i < labels.size(); ++i) {
-  //   weights.push_back(1.0);
-  // }
-  //
-  // vector<int> origFeatureIndex;
-  // for (int j = 0; j < features.size(); ++j) {
-  //   origFeatureIndex.push_back(j);
-  // }
-  //
-  // Node *root = new Node();
-
+  // vector<int> labels = readY("./data/yTr.csv");
+  // vector<vector<double>> features = readX("./data/xTr.csv");
+  vector<int> labels = readYLetter("./data/letter_yTr700.csv");
+  vector<vector<double>> features = readX("./data/letter_xTr700.csv");
   // clockmark_t begin_rm = ktiming_getmark();
-  // buildTree(root, 1, labels, features, origIndex, origFeatureIndex, weights);
+  // Node *root = histTree(features, labels);
   // clockmark_t end_rm = ktiming_getmark();
-
   // printf("Elapsed time in seconds: %f\n", ktiming_diff_sec(&begin_rm, &end_rm));
+
+  vector<int> origIndex = getOrigIndex(labels);
+
+  vector<double> weights;
+  for (int i = 0; i < labels.size(); ++i) {
+    weights.push_back(1.0);
+  }
+
+  vector<int> origFeatureIndex;
+  for (int j = 0; j < features.size(); ++j) {
+    origFeatureIndex.push_back(j);
+  }
+
+  Node *root = new Node();
+
+  clockmark_t begin_rm = ktiming_getmark();
+  // buildTree(root, 1, labels, features, origIndex, origFeatureIndex);
+  rfOutput* output = randomForestHist(features, labels, 4, 50);
+  // cout << "after rf" << endl;
+  clockmark_t end_rm = ktiming_getmark();
+
+  printf("Elapsed time in seconds: %f\n", ktiming_diff_sec(&begin_rm, &end_rm));
 
   // vector<int> labelsTest = readY("./data/yTe.csv");
   // vector<vector<double>> featuresTest = readX("./data/xTe.csv");
-  
-  // vector<int> labelsTest = readYLetter("./data/letter_yTe5000.csv");
-  // vector<vector<double> > featuresTest = readX("./data/letter_xTe5000.csv");
+
+  // vector<int> labelsTest = readYLetter("./data/letter_yTe3000.csv");
+  // vector<vector<double> > featuresTest = readX("./data/letter_xTe3000.csv");
   //
-  // vector<int> pred = evalHistTree(root, featuresTest);
+  // vector<int> pred = evalForestHist(output, 50, featuresTest);
   // int numTest = labelsTest.size();
   // int same = 0;
   // for (int i = 0; i < numTest; ++i) {

@@ -43,8 +43,7 @@ int mode(vector<int> &y, int size) {
 }
 
 EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
-                                 vector<int> &featureIndex,
-                                 vector<double> &weights) {
+                                 vector<int> &featureIndex) {
   int numData = yTr.size();
 
   set<int> uniqueY;
@@ -139,9 +138,9 @@ EntropySplitOutput *entropySplit(vector<vector<double>> &xTr, vector<int> &yTr,
 }
 
 // Recursively build
-void buildTree(Node *currentNode, int depth, const vector<int> &labels,
+void buildTree(Node *currentNode, int depth, vector<int> &labels,
                vector<vector<double>> &features, vector<int> &index,
-               vector<int> &featureIndex, vector<double> &weights) {
+               vector<int> &featureIndex) {
   // x, y values.
   int indexSize = index.size();
   int featureSize = features.size();
@@ -189,7 +188,7 @@ void buildTree(Node *currentNode, int depth, const vector<int> &labels,
     xCopy.push_back(curVector);
   }
 
-  EntropySplitOutput *splitOutput = entropySplit(xCopy, yCopy, featureIndex, weights);
+  EntropySplitOutput *splitOutput = entropySplit(xCopy, yCopy, featureIndex);
 
   int selectedFeatureIndex = splitOutput->feature;
   // cout << "selectedFeatureIndex: " << selectedFeatureIndex << endl;
@@ -225,9 +224,9 @@ void buildTree(Node *currentNode, int depth, const vector<int> &labels,
   currentNode->right = new Node();
   // cilk_spawn
   cilk_spawn buildTree(currentNode->left, depth + 1, labels, features,
-                       leftIndex, featureIndex, weights);
+                       leftIndex, featureIndex);
   buildTree(currentNode->right, depth + 1, labels, features, rightIndex,
-            featureIndex, weights);
+            featureIndex);
   cilk_sync;
   return;
 }
@@ -262,9 +261,7 @@ vector<int> sampleWithReplacement(int total, int size) {
 
 rfOutput* randomForest(const vector<vector<double>> x, const vector<int> y, int k, int nt) {
   Node** ans = (Node **)malloc(sizeof(Node*) * nt);
-  vector<double> weights;
   vector<int> featureIndex;
-  vector<vector<int>> selectedFeatures;
   vector<int> index;
   int numFeature = x.size();
   int numData = y.size();
@@ -277,47 +274,51 @@ rfOutput* randomForest(const vector<vector<double>> x, const vector<int> y, int 
     featureIndex.push_back(i);
   }
 
+  cout << "before for loop" << endl;
   for (int i = 0; i < nt; ++nt) {
     // Sample k feature without replacement.
-    vector<int> sampleFeature;
-    // obtain a time-based seed:
-    unsigned seed = chrono::system_clock::now().time_since_epoch().count();
-    shuffle(featureIndex.begin(), featureIndex.end(), default_random_engine(seed));
-    for (int j = 0; j < k; ++j) {
-      sampleFeature.push_back(featureIndex[j]);
-    }
-    selectedFeatures.push_back(sampleFeature);
+    // vector<int> sampleFeature;
+    // // obtain a time-based seed:
+    // unsigned seed = chrono::system_clock::now().time_since_epoch().count();
+    // shuffle(featureIndex.begin(), featureIndex.end(), default_random_engine(seed));
+    // for (int j = 0; j < k; ++j) {
+    //   sampleFeature.push_back(featureIndex[j]);
+    // }
 
     // Sample numData data.
     const vector<int> sampleData = sampleWithReplacement(numData, numData);
     vector<vector<double>> newX;
     vector<int> newY;
-    for (auto m = sampleFeature.begin(); m != sampleFeature.end(); ++m) {
+    for (int j = 0; j < numFeature; ++j) {
       vector<double> tmpX;
       for (auto n = sampleData.begin(); n != sampleData.end(); ++n) {
-        tmpX.push_back(x[*m][*n]);
+        tmpX.push_back(x[j][*n]);
+        cout << x[j][*n] << endl;
       }
       newX.push_back(tmpX);
     }
-
+    cout << "after push new X" << endl;
     for (auto n = sampleData.begin(); n != sampleData.end(); ++n) {
+      cout << y[*n] << endl;
       newY.push_back(y[*n]);
     }
+    cout << "after push newY" << endl;
 
     Node *node = NULL;
-    buildTree(node, 1, newY, newX, index, sampleFeature, weights);
+    buildTree(node, 1, newY, newX, index, featureIndex);
     ans[i] = node;
+    cout << "after build tree" << endl;
   }
   rfOutput *output = new rfOutput();
   output->nodes = ans;
-  output->selectedFeatures = selectedFeatures;
+  output->selectedFeatures = featureIndex;
   return output;
 }
 
 vector<int> evalForest(rfOutput* forestOutput, int nt, vector<vector<double>> &xTe) {
   vector<vector<int>> ans;
   Node **treeArr = forestOutput->nodes;
-  vector<vector<int>> selectedFeatures = forestOutput->selectedFeatures;
+  vector<int> selectedFeatures = forestOutput->selectedFeatures;
 
   for (int i = 0; i < nt; ++i) {
     Node *tree = treeArr[i];
@@ -333,7 +334,7 @@ vector<int> evalForest(rfOutput* forestOutput, int nt, vector<vector<double>> &x
     for (int i = 0; i < numRow; ++i) {
       curColumn.push_back(ans[i][j]);
     }
-    pred.push_back(mode(curColumn, numCol));
+    pred.push_back(mode(curColumn, numRow));
   }
   return pred;
 }

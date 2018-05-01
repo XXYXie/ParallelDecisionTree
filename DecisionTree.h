@@ -15,8 +15,8 @@ struct Node {
   // Left and right child.
   Node *left;
   Node *right;
-  // Parent of this node.
-  Node *parent;
+  // Parent of this node. Don't need this.
+  // Node *parent;
 };
 
 struct EntropySplitOutput {
@@ -30,12 +30,13 @@ struct EntropySplitOutput {
 
 struct rfOutput {
   Node** nodes;
-  vector<vector<int>> selectedFeatures;
+  vector<int> selectedFeatures;
 };
 
-void buildTree(Node *parent, int depth, const vector<int> &labels,
+void buildTree(Node *parent, int depth, vector<int> &labels,
                vector<vector<double>> &features, vector<int> &index,
-               vector<int> &featureIndex, vector<double> &weights);
+               vector<int> &featureIndex);
 vector<int> evalTree(Node *node, vector<vector<double> > &xTe);
 vector<int> sampleWithReplacement(int total, int size);
+rfOutput* randomForest(vector<vector<double>> x, const vector<int> y, int k, int nt);
 #endif

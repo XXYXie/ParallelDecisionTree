@@ -11,9 +11,9 @@
 
 #include "DecisionTree.h"
 
-#define W 16
+#define W 2
 #define THRESHOLD 0.01
-#define Bt 1500
+#define Bt 700
 
 using namespace std;
 
@@ -60,3 +60,5 @@ Node *histTree(vector<vector<double>> x, vector<int> y);
 FixedHistogram **compressData(vector<vector<double>> x, vector<int> y,
                               int uniqueY, int dimension);
 vector<int> evalHistTree(Node *node, vector<vector<double>> &xTe);
+rfOutput* randomForestHist(vector<vector<double>> x, vector<int> y, int k, int nt);
+vector<int> evalForestHist(rfOutput* forestOutput, int nt, vector<vector<double>> &xTe);

@@ -268,7 +268,7 @@ Node* histTree(vector<vector<double>> x, vector<int> y) {
     }
 
   }
-  cout << "numNode: " << numNode << endl;
+  // cout << "numNode: " << numNode << endl;
   return root;
 
 }
@@ -526,4 +526,103 @@ vector<int> evalHistTree(Node *node, vector<vector<double>> &xTe) {
     ans.push_back(nodeCopy->prediction);
   }
   return ans;
+}
+
+vector<int> sampleWithReplacementHist(int total, int size) {
+  vector<int> ans;
+  for (int i = 0; i < size; ++i) {
+    int randomNum = rand() % total;
+    ans.push_back(randomNum);
+  }
+  return ans;
+}
+
+rfOutput* randomForestHist(vector<vector<double>> x, vector<int> y, int k, int nt) {
+  Node** ans = (Node **)malloc(sizeof(Node*) * nt);
+  vector<int> featureIndex;
+  vector<int> index;
+  int numFeature = x.size();
+  int numData = y.size();
+
+  for (int i = 0; i < numData; ++i) {
+    index.push_back(i);
+  }
+
+  for (int i = 0; i < numFeature; ++i) {
+    featureIndex.push_back(i);
+  }
+
+  cilk_for (int i = 0; i < nt; ++i) {
+    // Sample k feature without replacement.
+    // vector<int> sampleFeature;
+    // // obtain a time-based seed:
+    // unsigned seed = chrono::system_clock::now().time_since_epoch().count();
+    // shuffle(featureIndex.begin(), featureIndex.end(), default_random_engine(seed));
+    // for (int j = 0; j < k; ++j) {
+    //   sampleFeature.push_back(featureIndex[j]);
+    // }
+
+    // Sample numData data.
+    const vector<int> sampleData = sampleWithReplacementHist(numData, numData);
+    vector<vector<double>> newX;
+    vector<int> newY;
+    for (int j = 0; j < numFeature; ++j) {
+      vector<double> tmpX;
+      for (auto n = sampleData.begin(); n != sampleData.end(); ++n) {
+        tmpX.push_back(x[j][*n]);
+      }
+      newX.push_back(tmpX);
+    }
+    for (auto n = sampleData.begin(); n != sampleData.end(); ++n) {
+      newY.push_back(y[*n]);
+    }
+
+    Node *node = histTree(newX, newY);
+    ans[i] = node;
+  }
+  rfOutput *output = new rfOutput();
+  output->nodes = ans;
+  output->selectedFeatures = featureIndex;
+  return output;
+}
+
+int modeHist(vector<int> &y, int size) {
+  unordered_map<int, int> hashMap;
+  for (int i = 0; i < size; ++i) {
+    hashMap[y[i]] += 1;
+  }
+
+  int curMax = 0;
+  int ansY = y[0];
+  for (auto iter = hashMap.begin(); iter != hashMap.end(); ++iter) {
+    if (iter->second > curMax) {
+      curMax = iter->second;
+      ansY = iter->first;
+    }
+  }
+  return ansY;
+}
+
+vector<int> evalForestHist(rfOutput* forestOutput, int nt, vector<vector<double>> &xTe) {
+  vector<vector<int>> ans;
+  Node **treeArr = forestOutput->nodes;
+  vector<int> selectedFeatures = forestOutput->selectedFeatures;
+
+  for (int i = 0; i < nt; ++i) {
+    Node *tree = treeArr[i];
+    vector<int> treeEval = evalHistTree(tree, xTe);
+    ans.push_back(treeEval);
+  }
+
+  int numCol = ans[0].size();
+  int numRow = ans.size();
+  vector<int> pred;
+  for (int j = 0; j < numCol; ++j) {
+    vector<int> curColumn;
+    for (int i = 0; i < numRow; ++i) {
+      curColumn.push_back(ans[i][j]);
+    }
+    pred.push_back(modeHist(curColumn, numRow));
+  }
+  return pred;
 }
