@@ -1,4 +1,4 @@
-// FixedHistogram class is from https://github.com/DELTA37/ParallelDecisionTree
+// Part of FixedHistogram class is from https://github.com/DELTA37/ParallelDecisionTree
 #include <vector>
 #include <functional>
 #include <map>
@@ -13,7 +13,11 @@
 
 #define W 2
 #define THRESHOLD 0.01
-#define Bt 700
+
+/* For a fixed number of data, using different number of bins doesn't change
+the test accuracy much. Therefore, we usually choose the bin size
+to be 1/10 of the input data size.*/
+#define Bt 70
 
 using namespace std;
 
@@ -35,7 +39,7 @@ public:
 
 private:
   /*
-   * The article definition B == data.size()
+   * We assign B = Bt in the implementation.
    */
   int B;
   double eps;
@@ -60,5 +64,7 @@ Node *histTree(vector<vector<double>> x, vector<int> y);
 FixedHistogram **compressData(vector<vector<double>> x, vector<int> y,
                               int uniqueY, int dimension);
 vector<int> evalHistTree(Node *node, vector<vector<double>> &xTe);
-rfOutput* randomForestHist(vector<vector<double>> x, vector<int> y, int k, int nt);
-vector<int> evalForestHist(rfOutput* forestOutput, int nt, vector<vector<double>> &xTe);
+rfOutput *randomForestHist(vector<vector<double>> x, vector<int> y, int k,
+                           int nt);
+vector<int> evalForestHist(rfOutput *forestOutput, int nt,
+                           vector<vector<double>> &xTe);

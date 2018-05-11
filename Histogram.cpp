@@ -1,4 +1,5 @@
-// From https://github.com/DELTA37/ParallelDecisionTree
+// Parts of sum, merge, uniform and update are from https://github.com/DELTA37/ParallelDecisionTree
+// We also fixed some of thier bugs.
 #include "Histogram.h"
 #include <cmath>
 #include <algorithm>
@@ -42,50 +43,21 @@ Node* histTree(vector<vector<double>> x, vector<int> y) {
       histNode->dataX[i].push_back(tmp);
     }
   }
-  // cout << "histNode->dataX[0][4]: " << histNode->dataX[0][0][4] << endl;
 
   q.push(histNode);
-  // cout << "after push histNode" << endl;
 
   while (!q.empty()) {
-    // cout << "q size: " << q.size() << endl;
     HistNode *curHistNode = q.front();
     q.pop();
-    // cout << "after q.pop()" << endl;
-    // cilk_for
     FixedHistogram** allHist[W];
     cilk_for (int i = 0; i < W; ++i) {
       // compress data.
-      // cout << "worker i: " << i << endl;
-      // cout << "data size: " << curHistNode->dataY[i].size() << endl;
-      // for (auto iter = curHistNode->dataY[i].begin(); iter != curHistNode->dataY[i].end(); ++iter) {
-      //   cout << "y: " << *iter << endl;
-      // }
-      // cout << "worker X: dataX[i][0][4]" << curHistNode->dataX[i][0][4] << endl;
-      // for (int w = 0; w != curHistNode->dataX[i].size(); ++w) {
-      //   for (int z = 0; z != curHistNode->dataX[i][w].size(); ++z) {
-      //     cout << curHistNode->dataX[i][w][z] << endl;
-      //   }
-      // }
-      // cout << "X end: " << endl;
 
       FixedHistogram **workerHist = compressData(
           curHistNode->dataX[i], curHistNode->dataY[i], numUniqueY, dimension);
 
       allHist[i] = workerHist;
-      // cout << "workerHist begin: " << endl;
-      // for (int j = 0; j < dimension; ++j) {
-      //   for (int k = 0; k < numUniqueY; ++k) {
-      //     // cout << "y: " << k << endl;
-      //     for (auto iter = workerHist[j][k].data.begin(); iter != workerHist[j][k].data.end(); ++iter) {
-      //       // cout << "first: " << iter->first << " second: " << iter->second << endl;
-      //     }
-      //   }
-      // }
-      // cout << "workerHist end: " << endl;
     }
-
-    // cout << "after compress data" << endl;
 
     FixedHistogram **array = allHist[0];
     // master worker.
@@ -93,17 +65,12 @@ Node* histTree(vector<vector<double>> x, vector<int> y) {
       cilk_for (int j = 0; j < numUniqueY; ++j) {
         for (int k = 1; k < W; ++k) {
           // Merge k, i, j.
-          // cout <<s i << " " << j << " " << k << endl;
-          // cout << "before merge" << endl;
           array[i][j].merge(allHist[k][i][j]);
-          // cout << "after merge" << endl;
-
         }
       }
     }
 
 
-    // cout << "after merge array" << endl;
     // Entropy.
     int yCount[numUniqueY];
     double sum = 0.0;
@@ -113,20 +80,17 @@ Node* histTree(vector<vector<double>> x, vector<int> y) {
     }
 
     double entropy = 0.0;
-    // cout << "sum: " << sum << endl;
     for (int j = 0; j < numUniqueY; ++j) {
       if (yCount[j] != 0) {
         double p = yCount[j] * 1.0 / sum;
-        // cout << " yCount[j]: " << yCount[j] << endl;
         entropy += - p * log2(p);
       }
     }
 
-    // cout << "entropy: " << entropy << endl;
     if (abs(entropy) < THRESHOLD) {
       // prediction is the index of the largest count.
-      // cout << "thres" << endl;
-      curHistNode->node->prediction = 1 + distance(yCount, max_element(yCount, yCount + numUniqueY));
+      curHistNode->node->prediction =
+          1 + distance(yCount, max_element(yCount, yCount + numUniqueY));
     } else {
       numNode++;
       FixedHistogram histArray[dimension];
@@ -139,52 +103,33 @@ Node* histTree(vector<vector<double>> x, vector<int> y) {
         for (int j = 1; j < numUniqueY; ++j) {
           histArray[i].merge(array[i][j]);
         }
-        // cout << "after merge before uniform" << endl;
-        // Uniform.
-        // cout << "histArray[i]" << endl;
-        // for (auto iter = histArray[i].data.begin(); iter != histArray[i].data.end(); ++iter) {
-        //   cout << "key: " << iter->first << " , value: " << iter->second << endl;
-        // }
-        // cout << "end histArray[i]\n" << endl;
+
         vector<double> uniformResult = histArray[i].uniform(Bt);
-        // cout << "after uniform" << endl;
-        // cout << "uniform result begin " << endl;
-        // for (auto k = uniformResult.begin(); k != uniformResult.end(); ++k) {
-        //   cout << *k << endl;
-        // }
-        // cout << "uniform result end " << endl;
+
 
         int uniformsize = uniformResult.size();
         cilk_for (int ku = 0; ku < uniformsize; ++ku) {
           double k = uniformResult[ku];
-        // for (auto k = uniformResult.begin(); k != uniformResult.end(); ++k) {
-          // cout << "uniform result *k: " << *k << endl;
           double leftCount[numUniqueY];
           double rightCount[numUniqueY];
           double totalCount[numUniqueY];
           double sumLeftCount = 0.0;
           double sumRightCount = 0.0;
           double sumTotalCount = 0.0;
-          // cout << "total count < left count ?????" << endl;
+
           for (int m = 0; m < numUniqueY; ++m) {
-            // cout << "before sum:" << endl;
             leftCount[m] = array[i][m].sum(k);
-            // cout << "*k: "<< *k << endl;
-            // cout << "after sum" << endl;
             sumLeftCount += leftCount[m];
-            totalCount[m] = array[i][m].sum(std::numeric_limits<double>::infinity());
-            // cout << "leftCount[m]: " << leftCount[m] << endl;
-            // cout << "totalCount[m]: " << totalCount[m] << endl;
+            totalCount[m] =
+                array[i][m].sum(std::numeric_limits<double>::infinity());
+
             sumTotalCount += totalCount[m];
             rightCount[m] = totalCount[m] - leftCount[m];
             sumRightCount += rightCount[m];
           }
-          // cout << "out numUniqueY" << endl;
           double leftEntropy = 0.0;
           double rightEntropy = 0.0;
 
-          // cout << "start entropy for loop " << endl;
-          // cout << "sumRightCount " << sumRightCount << endl;
           for (int m = 0; m < numUniqueY; ++m) {
             if (leftCount[m] != 0){
               double p = leftCount[m]/sumLeftCount;
@@ -192,22 +137,13 @@ Node* histTree(vector<vector<double>> x, vector<int> y) {
             }
             if (rightCount[m] != 0) {
               double p = rightCount[m]/sumRightCount;
-              // cout << "rightCount[m]: " << rightCount[m] << endl;
-              // cout << "p: " << p << endl;
               rightEntropy += - p * log2(p);
             }
           }
-          // cout << "out numUniqueY2" << endl;
-          // cout << "left entropy: " << leftEntropy << endl;
-          // cout << "right entropy: " << rightEntropy << endl;
-          // cout << "sumLeftCount: " << sumLeftCount << endl;
-          // cout << "sumRightCount: " << sumRightCount << endl;
-          // cout << "sumTotalCount: " << sumTotalCount << endl;
 
           double curEntropy = -sumLeftCount / sumTotalCount * leftEntropy -
                            sumRightCount / sumTotalCount * rightEntropy;
-          // cout << "curEntropy: " << curEntropy << endl;
-          // cout << "i: " << i << " *k: " << *k << endl;
+
           if (curEntropy > maxEntropy) {
             maxEntropy = curEntropy;
             bestSplitVal = k;
@@ -216,8 +152,6 @@ Node* histTree(vector<vector<double>> x, vector<int> y) {
         }
       }
 
-      // cout << "bestSplitVal: " << bestSplitVal << endl;
-      // cout << "bestFeature: " << bestFeature << endl;
       curHistNode->node->featureIndex = bestFeature;
       curHistNode->node->cutoff = bestSplitVal;
 
@@ -243,8 +177,6 @@ Node* histTree(vector<vector<double>> x, vector<int> y) {
               tmpRight.push_back(curHistNode->dataX[i][k][j]);
             }
           }
-          // cout << "tmpLeft size: " << tmpLeft.size() << endl;
-          // cout << "tmpRight size: " << tmpRight.size() << endl;
 
           leftHistNode->dataX[i].push_back(tmpLeft);
           rightHistNode->dataX[i].push_back(tmpRight);
@@ -257,18 +189,14 @@ Node* histTree(vector<vector<double>> x, vector<int> y) {
             rightHistNode->dataY[i].push_back(curHistNode->dataY[i][j]);
           }
         }
-        // cout << "leftHistNode->dataY[i] size: " << leftHistNode->dataY[i].size() << endl;
-        // cout << "rightHistNode->dataY[i] size: " << rightHistNode->dataY[i].size() << endl;
       }
 
       // push two nodes onto the queue
       q.push(leftHistNode);
       q.push(rightHistNode);
-      // cout << "after push 2" << endl;
     }
 
   }
-  // cout << "numNode: " << numNode << endl;
   return root;
 
 }
@@ -276,14 +204,8 @@ Node* histTree(vector<vector<double>> x, vector<int> y) {
 FixedHistogram **compressData(vector<vector<double>> x,
                                               vector<int> y, int uniqueY,
                                               int dimension) {
-  // cout << "compress data x[0][4]: " << x[0][4] << endl;
-  // vector<vector<FixedHistogram>> ans;
   int numData = y.size();
-  // set<int> uniqueY;
-  // for (int i = 0; i < numData; i++) {
-  //   uniqueY.insert(y[i]);
-  // }
-  // int numUniqueY = uniqueY.size();
+
   FixedHistogram **array = new FixedHistogram*[dimension];
   // Empty historgrams.
   vector<double> points;
@@ -294,29 +216,18 @@ FixedHistogram **compressData(vector<vector<double>> x,
     }
   }
 
-  // cout << "after assign FixedHistogram" << endl;
 
   for (int i = 0; i < numData; ++i) {
-    // cout << "i: " << i << endl;
     for (int j = 0; j < dimension; ++j) {
-      // cout << "i: " << i << " j: " << j << endl;
-      // cout << "y[i]: " << y[i] << endl;
-      // cout << "x[j][i]: " << x[j][i] << endl;
-      // cout << "before update" << endl;
-      // cout << "j: " << j << " i: " << i << " x[j][i]: " << x[j][i] << endl;
       array[j][y[i]-1].update(x[j][i], 1);
-      // cout << "after update"  << endl;
     }
   }
-
-  // cout << "after update histogram" << endl;
 
   return array;
 }
 
 void FixedHistogram::_reduce(void) {
   int size = data.size();
-  // cout << "data size: " << size << endl;
   if (size == 0) return;
   std::list<double> diff;
   std::transform(data.begin(), std::prev(data.end()), std::next(data.begin()), std::back_inserter(diff),
@@ -325,38 +236,27 @@ void FixedHistogram::_reduce(void) {
     }
   );
 
-  // cout << "diff size: " << diff.size() << endl;
 
   if (size <= B) {
-    //cout << "size <= B" << endl;
     return;
   }
 
   for (int i = 0; i < size - B; ++i) {
-    // cout << "reduce for data: " << endl;
-    // for (auto iterator = data.begin(); iterator != data.end(); iterator++) {
-    //   cout << iterator->first << " "  << iterator->second << endl;
-    // }
-    // cout << "data size: " << data.size() << endl;
-    // cout << "diff size: " << diff.size() << endl;
     auto list_it = std::min_element(diff.begin(), diff.end());
     auto list_nit = std::next(list_it);
     auto list_pit = std::prev(list_it);
 
     int ind = std::distance(diff.begin(), list_it);
-    // cout << "ind: " << ind << endl;
 
     auto min_it = std::next(data.begin(), ind);
     auto min_nit = std::next(min_it);
     auto min_nnit = std::next(min_nit);
     auto min_pit = std::prev(min_it);
 
-    //cout << "min_nit is end: " << (min_nit == data.end()) << endl;
 
     double point = (min_it->first * min_it->second + min_nit->first * min_nit->second) / (min_it->second + min_nit->second);
     int value = min_it->second + min_nit->second;
 
-    //cout << "point: " << point << " value: " << value << endl;
     // if (min_nnit != data.end()) {
     //   diff.insert(list_it, min_nnit->first - point);
     // }
@@ -379,13 +279,8 @@ void FixedHistogram::_reduce(void) {
     // }
 
     data[point] = value;
-    // cout << "erase min_it" << endl;
     data.erase(min_it);
-    // cout << "erase min_nit" << endl;
-    // cout << "min_nit->second: " << min_nit->second << endl;
     data.erase(min_nit);
-    //cout << "erase min_nit" << endl;
-    // cout << "after erase erase min_nit" << endl;
 
     diff.clear();
     std::transform(data.begin(), std::prev(data.end()), std::next(data.begin()), std::back_inserter(diff),
@@ -393,14 +288,12 @@ void FixedHistogram::_reduce(void) {
         return y.first - x.first;
       }
     );
-    // cout << "after clear diff" << endl;
   }
 }
 
 FixedHistogram::FixedHistogram(int _B, std::vector<double> const& points, double _eps) : B(_B), eps(_eps) {
   min_point = std::numeric_limits<double>::max();
   max_point = std::numeric_limits<double>::min();
-  // assert(_B == points.size());
   for (auto const& p : points) {
     data[p] += 1;
     min_point = std::min(p, min_point);
@@ -484,19 +377,11 @@ std::vector<double> FixedHistogram::uniform(int _B) {
 }
 
 void FixedHistogram::update(double const& p, int c) {
-  // cout << "p: " << p << endl;
   data[p] += c;
-  // cout << "data[p]: " << data[p] << endl;
   min_point = std::min(p, min_point);
   max_point = std::max(p, max_point);
-  // // cout << "before reduce all data" << endl;
-  // for (auto iter = data.begin(); iter != data.end(); ++iter) {
-  //   cout << "first: " << iter->first << " second: " << iter->second << endl;
-  // }
-  // cout << "before reduce" << endl;
 
   _reduce();
-  // cout << "after reduce" << endl;
 }
 
 void FixedHistogram::merge(FixedHistogram const& h) {
@@ -505,9 +390,7 @@ void FixedHistogram::merge(FixedHistogram const& h) {
     min_point = std::min(it->first, min_point);
     max_point = std::max(it->first, max_point);
   }
-  // cout << "before merge reduce" << endl;
   _reduce();
-  // cout << "after merge reduce" << endl;
 }
 
 vector<int> evalHistTree(Node *node, vector<vector<double>> &xTe) {
