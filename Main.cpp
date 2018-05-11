@@ -106,7 +106,6 @@ int main(int argv, char **argc) {
   clockmark_t begin_rm = ktiming_getmark();
   // buildTree(root, 1, labels, features, origIndex, origFeatureIndex);
   rfOutput* output = randomForestHist(features, labels, 4, 50);
-  // cout << "after rf" << endl;
   clockmark_t end_rm = ktiming_getmark();
 
   printf("Elapsed time in seconds: %f\n", ktiming_diff_sec(&begin_rm, &end_rm));
@@ -114,20 +113,18 @@ int main(int argv, char **argc) {
   // vector<int> labelsTest = readY("./data/yTe.csv");
   // vector<vector<double>> featuresTest = readX("./data/xTe.csv");
 
-  // vector<int> labelsTest = readYLetter("./data/letter_yTe3000.csv");
-  // vector<vector<double> > featuresTest = readX("./data/letter_xTe3000.csv");
-  //
-  // vector<int> pred = evalForestHist(output, 50, featuresTest);
-  // int numTest = labelsTest.size();
-  // int same = 0;
-  // for (int i = 0; i < numTest; ++i) {
-  //   // cout << "labelsTest[i]: " << labelsTest[i] << endl;
-  //   // cout << "pred[i]: " << pred[i] << endl;
-  //   if (labelsTest[i] == pred[i]) {
-  //     same++;
-  //   }
-  // }
-  // double accuracy = 1.0 * same / numTest;
-  // cout << "accuracy: " << accuracy << endl;
+  vector<int> labelsTest = readYLetter("./data/letter_yTe300.csv");
+  vector<vector<double> > featuresTest = readX("./data/letter_xTe300.csv");
+
+  vector<int> pred = evalForestHist(output, 50, featuresTest);
+  int numTest = labelsTest.size();
+  int same = 0;
+  for (int i = 0; i < numTest; ++i) {
+    if (labelsTest[i] == pred[i]) {
+      same++;
+    }
+  }
+  double accuracy = 1.0 * same / numTest;
+  cout << "accuracy: " << accuracy << endl;
   return 0;
 }

@@ -18,13 +18,7 @@ all: decisionTree
 # When compile histogram, use clang++. When compile DecisionTree, use g++
 decisionTree: Main.o Histogram.o ktiming.o
 # decisionTree: Main.o DecisionTree.o ktiming.o
-#	$(CXX) Main.o DecisionTree.o -o decisionTree
 	$(CXX) -o $@ $^ $(LIBS)
 
-# Main.o: Main.cpp
-# 	$(CXX) $(CFLAGS) Main.cpp
-#
-# DecisionTree.o: DecisionTree.cpp
-# 	$(CXX) $(CFLAGS) DecisionTree.cpp
 clean:
 	-rm -f *.o
